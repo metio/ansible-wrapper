@@ -1,0 +1,8 @@
+# SPDX-FileCopyrightText: The ansible-wrapper Authors
+# SPDX-License-Identifier: 0BSD
+
+target
+.venv
+pyproject.toml
+requirements.yml
+uv.lock

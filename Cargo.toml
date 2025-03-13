@@ -1,0 +1,22 @@
+# SPDX-FileCopyrightText: The ansible-wrapper Authors
+# SPDX-License-Identifier: 0BSD
+
+[package]
+name = "ansible-wrapper"
+version = "0.0.0"
+authors = ["Sebastian Hoß <seb@xn--ho-hia.de>"]
+edition = "2024"
+rust-version = "1.85.0"
+description = "Wrapper around various Ansible commands to automatically manage dependencies"
+readme = "README.md"
+license = "0BSD"
+keywords = ["ansible", "python", "wrapper"]
+categories = ["command-line-utilities"]
+homepage = "https://github.com/metio/ansible-wrapper"
+repository = "https://github.com/metio/ansible-wrapper"
+
+[dependencies]
+semver = { version = "1.0.26" }
+serde = { version = "1.0.219", features = ["derive"] }
+serde_yaml_ng = { version = "0.10.0" }
+which = { version = "7.0.2" }
