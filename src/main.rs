@@ -23,24 +23,26 @@ fn main() {
 
             if command == "ansible-playbook" {
                 if let Some(requirements_file) = lookup_requirements_file() {
-                    let installed_ansible_collections = parse_installed_ansible_collections();
                     let ansible_requirements = parse_ansible_requirements(&requirements_file);
-                    if requires_ansible_galaxy_install(
-                        installed_ansible_collections,
-                        ansible_requirements,
-                    ) {
-                        let status = Command::new("uv")
-                            .arg("run")
-                            .arg("--")
-                            .arg("ansible-galaxy")
-                            .arg("install")
-                            .arg("-r")
-                            .arg(&requirements_file)
-                            .status()
-                            .expect("Process to finish with output");
-                        let exist_code = status.code().expect("Process to return its exist code");
-                        if exist_code != 0 {
-                            panic!("ansible-galaxy was not successful")
+                    if ansible_requirements.collections.len() > 0 {
+                        let installed_ansible_collections = parse_installed_ansible_collections();
+                        if requires_ansible_galaxy_install(
+                            installed_ansible_collections,
+                            ansible_requirements,
+                        ) {
+                            let status = Command::new("uv")
+                                .arg("run")
+                                .arg("--")
+                                .arg("ansible-galaxy")
+                                .arg("install")
+                                .arg("-r")
+                                .arg(&requirements_file)
+                                .status()
+                                .expect("Process to finish with output");
+                            let exist_code = status.code().expect("Process to return its exist code");
+                            if exist_code != 0 {
+                                panic!("ansible-galaxy was not successful")
+                            }
                         }
                     }
                 }
