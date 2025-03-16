@@ -6,8 +6,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::PathBuf;
 
-pub(crate) fn parse_installed_collections()
--> BTreeMap<String, BTreeMap<String, Vec<String>>> {
+pub(crate) fn parse_installed_collections() -> BTreeMap<String, BTreeMap<String, Vec<String>>> {
     let collections_path = std::env::var_os("ANSIBLE_COLLECTIONS_PATH")
         .map(PathBuf::from)
         .or_else(|| {
@@ -35,7 +34,9 @@ pub(crate) fn parse_installed_collections()
         {
             paths_to_check.push(path);
         }
-        paths_to_check.push(PathBuf::from("/usr/share/ansible/collections/ansible_collections"));
+        paths_to_check.push(PathBuf::from(
+            "/usr/share/ansible/collections/ansible_collections",
+        ));
     }
 
     let mut installed_collections: BTreeMap<String, BTreeMap<String, Vec<String>>> =
@@ -74,8 +75,7 @@ pub(crate) fn parse_installed_collections()
     installed_collections
 }
 
-pub(crate) fn parse_installed_roles() -> BTreeMap<String, BTreeMap<String, Vec<String>>>
-{
+pub(crate) fn parse_installed_roles() -> BTreeMap<String, BTreeMap<String, Vec<String>>> {
     let roles_path = std::env::var_os("ANSIBLE_ROLES_PATH")
         .map(PathBuf::from)
         .or_else(|| {
@@ -106,8 +106,7 @@ pub(crate) fn parse_installed_roles() -> BTreeMap<String, BTreeMap<String, Vec<S
         paths_to_check.push(PathBuf::from("/etc/ansible/roles"));
     }
 
-    let mut installed_roles: BTreeMap<String, BTreeMap<String, Vec<String>>> =
-        BTreeMap::new();
+    let mut installed_roles: BTreeMap<String, BTreeMap<String, Vec<String>>> = BTreeMap::new();
     for role_path in paths_to_check {
         if role_path.exists() {
             let paths = std::fs::read_dir(&role_path).expect("Failed to read directory");

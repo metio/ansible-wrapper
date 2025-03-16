@@ -22,8 +22,8 @@ fn main() {
         Some(command) => {
             run_preflight_checks();
 
-            if command == "ansible-playbook" {
-                if !user_wants_help() && !user_wants_version() {
+            if !user_wants_help() && !user_wants_version() {
+                if command == "ansible-playbook" {
                     if let Some(requirements_file) = lookup_requirements_file() {
                         let ansible_requirements = parse_ansible_requirements(&requirements_file);
                         let mut run_ansible_galaxy_install = false;
@@ -51,7 +51,8 @@ fn main() {
                                 .arg(&requirements_file)
                                 .status()
                                 .expect("Process to finish with output");
-                            let exist_code = status.code().expect("Process to return its exist code");
+                            let exist_code =
+                                status.code().expect("Process to return its exist code");
                             if exist_code != 0 {
                                 panic!("ansible-galaxy was not successful")
                             }
@@ -110,8 +111,14 @@ fn requires_ansible_galaxy_install(
         for (_, installed_collections) in &installed_ansible_collections {
             found_installed_version |= installed_collections
                 .get(&requirement.name)
-                .map(|installed_collections| installed_collections.iter()
-                    .any(|installed_version| installed_version_fulfills_requirement(installed_version, &requirement.version)))
+                .map(|installed_collections| {
+                    installed_collections.iter().any(|installed_version| {
+                        installed_version_fulfills_requirement(
+                            installed_version,
+                            &requirement.version,
+                        )
+                    })
+                })
                 .unwrap_or(false);
         }
         if !found_installed_version {
