@@ -68,6 +68,8 @@ jobs:
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
         if: needs.prepare.outputs.release_version != ''
+        with:
+          key: ${{ matrix.target }}
       - id: versioning
         name: Modify release version
         if: needs.prepare.outputs.release_version != ''
