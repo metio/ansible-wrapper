@@ -2,3 +2,4 @@
 // SPDX-License-Identifier: 0BSD
 
 pub(crate) mod model;
+pub(crate) mod galaxy;

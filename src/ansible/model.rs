@@ -4,12 +4,18 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct AnsibleRequirementsFile {
-    pub(crate) collections: Vec<AnsibleRequirement>,
+pub(crate) struct GalaxyRequirementsFile {
+    pub(crate) collections: Vec<GalaxyRequirement>,
+    pub(crate) roles: Vec<GalaxyRequirement>,
 }
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct AnsibleRequirement {
+pub(crate) struct GalaxyRequirement {
     pub(crate) name: String,
+    pub(crate) version: String,
+}
+
+#[derive(Deserialize, Debug)]
+pub(crate) struct GalaxyInstallInfoFile {
     pub(crate) version: String,
 }

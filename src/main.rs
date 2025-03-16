@@ -1,7 +1,8 @@
 // SPDX-FileCopyrightText: The ansible-wrapper Authors
 // SPDX-License-Identifier: 0BSD
 
-use crate::ansible::model::AnsibleRequirementsFile;
+use crate::ansible::galaxy::{parse_installed_collections, parse_installed_roles};
+use crate::ansible::model::{GalaxyRequirement, GalaxyRequirementsFile};
 use fs::File;
 use semver::{Version, VersionReq};
 use std::collections::BTreeMap;
@@ -24,25 +25,34 @@ fn main() {
             if command == "ansible-playbook" {
                 if let Some(requirements_file) = lookup_requirements_file() {
                     let ansible_requirements = parse_ansible_requirements(&requirements_file);
+                    let mut run_ansible_galaxy_install = false;
                     if ansible_requirements.collections.len() > 0 {
-                        let installed_ansible_collections = parse_installed_ansible_collections();
-                        if requires_ansible_galaxy_install(
+                        let installed_ansible_collections = parse_installed_collections();
+                        run_ansible_galaxy_install |= requires_ansible_galaxy_install(
                             installed_ansible_collections,
-                            ansible_requirements,
-                        ) {
-                            let status = Command::new("uv")
-                                .arg("run")
-                                .arg("--")
-                                .arg("ansible-galaxy")
-                                .arg("install")
-                                .arg("-r")
-                                .arg(&requirements_file)
-                                .status()
-                                .expect("Process to finish with output");
-                            let exist_code = status.code().expect("Process to return its exist code");
-                            if exist_code != 0 {
-                                panic!("ansible-galaxy was not successful")
-                            }
+                            &ansible_requirements.collections,
+                        );
+                    }
+                    if ansible_requirements.roles.len() > 0 {
+                        let installed_ansible_roles = parse_installed_roles();
+                        run_ansible_galaxy_install |= requires_ansible_galaxy_install(
+                            installed_ansible_roles,
+                            &ansible_requirements.roles,
+                        );
+                    }
+                    if run_ansible_galaxy_install {
+                        let status = Command::new("uv")
+                            .arg("run")
+                            .arg("--")
+                            .arg("ansible-galaxy")
+                            .arg("install")
+                            .arg("-r")
+                            .arg(&requirements_file)
+                            .status()
+                            .expect("Process to finish with output");
+                        let exist_code = status.code().expect("Process to return its exist code");
+                        if exist_code != 0 {
+                            panic!("ansible-galaxy was not successful")
                         }
                     }
                 }
@@ -82,18 +92,16 @@ fn lookup_requirements_file() -> Option<OsString> {
 }
 
 fn requires_ansible_galaxy_install(
-    installed_ansible_collections: BTreeMap<String, BTreeMap<String, BTreeMap<String, String>>>,
-    ansible_requirements: AnsibleRequirementsFile,
+    installed_ansible_collections: BTreeMap<String, BTreeMap<String, Vec<String>>>,
+    ansible_requirements: &Vec<GalaxyRequirement>,
 ) -> bool {
-    for requirement in &ansible_requirements.collections {
+    for requirement in ansible_requirements {
         let mut found_installed_version = false;
         for (_, installed_collections) in &installed_ansible_collections {
             found_installed_version |= installed_collections
                 .get(&requirement.name)
-                .and_then(|installed_collections| installed_collections.get("version"))
-                .map(|version| {
-                    installed_version_fulfills_requirement(version, &requirement.version)
-                })
+                .map(|installed_collections| installed_collections.iter()
+                    .any(|installed_version| installed_version_fulfills_requirement(installed_version, &requirement.version)))
                 .unwrap_or(false);
         }
         if !found_installed_version {
@@ -113,7 +121,7 @@ fn installed_version_fulfills_requirement(installed: &str, wanted: &str) -> bool
     requirement.matches(&version)
 }
 
-fn parse_ansible_requirements(requirements: &OsString) -> AnsibleRequirementsFile {
+fn parse_ansible_requirements(requirements: &OsString) -> GalaxyRequirementsFile {
     let file = File::open(requirements).expect("file should open read only");
     serde_yaml_ng::from_reader(file)
         .expect("[ERROR] Cannot parse output of 'ansible-galaxy collection list'")
@@ -124,32 +132,4 @@ fn run_preflight_checks() {
     Path::new("pyproject.toml")
         .try_exists()
         .expect("[ERROR] You need to create a 'pyproject.toml' file first");
-}
-
-fn parse_installed_ansible_collections()
--> BTreeMap<String, BTreeMap<String, BTreeMap<String, String>>> {
-    let output = Command::new("uv")
-        .arg("run")
-        .arg("--")
-        .arg("ansible-galaxy")
-        .arg("collection")
-        .arg("list")
-        .arg("--format")
-        .arg("yaml")
-        .output()
-        .expect("Process to finish with output");
-
-    let exist_code = output
-        .status
-        .code()
-        .expect("Process to return its exist code");
-    if exist_code == 0 {
-        let stdout = std::str::from_utf8(&output.stdout).expect("STDOUT to be valid UTF-8");
-        serde_yaml_ng::from_str(stdout)
-            .expect("[ERROR] Cannot parse output of 'ansible-galaxy collection list'")
-    } else {
-        let stderr = std::str::from_utf8(&output.stderr).expect("STDERR to be valid UTF-8");
-        println!("{}", stderr);
-        panic!("uv was not successful")
-    }
 }
