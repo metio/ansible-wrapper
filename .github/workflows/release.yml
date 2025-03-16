@@ -41,7 +41,6 @@ jobs:
         include:
           - target: aarch64-apple-darwin
           - target: aarch64-unknown-linux-gnu
-          - target: i686-unknown-linux-gnu
           - target: x86_64-apple-darwin
           - target: x86_64-unknown-linux-gnu
     steps:
@@ -52,6 +51,8 @@ jobs:
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@stable
         if: needs.prepare.outputs.release_version != ''
+        with:
+          targets: aarch64-apple-darwin,aarch64-unknown-linux-gnu,x86_64-apple-darwin,x86_64-unknown-linux-gnu
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
         if: needs.prepare.outputs.release_version != ''
@@ -89,6 +90,12 @@ jobs:
       - id: checkout
         name: Clone Git Repository
         uses: actions/checkout@v4
+        if: needs.prepare.outputs.release_version != ''
+      - name: Set up Rust
+        uses: dtolnay/rust-toolchain@stable
+        if: needs.prepare.outputs.release_version != ''
+      - name: Cache Dependencies
+        uses: Swatinem/rust-cache@v2
         if: needs.prepare.outputs.release_version != ''
       - id: download
         name: Download Artifacts
