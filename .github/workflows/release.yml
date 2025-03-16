@@ -61,9 +61,6 @@ jobs:
         uses: taiki-e/install-action@v2
         with:
           tool: cross
-      - name: Configure cross
-        if: matrix.cross
-        run: echo "CARGO=cross" >> "$GITHUB_ENV"
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
         if: needs.prepare.outputs.release_version != ''
@@ -73,8 +70,12 @@ jobs:
         run: sed -i -e '0,/authors/s/^version = .*/version = "${{ needs.prepare.outputs.release_version }}"/' Cargo.toml
       - id: build
         name: Build Project
-        if: needs.prepare.outputs.release_version != ''
-        run: ${{ env.CARGO }} build --release --target ${{ matrix.target }}
+        if: needs.prepare.outputs.release_version != '' && !matrix.cross
+        run: cargo build --release --target ${{ matrix.target }}
+      - id: cross
+        name: Build Project
+        if: needs.prepare.outputs.release_version != '' && matrix.cross
+        run: cross build --release --target ${{ matrix.target }}
       - id: tar
         name: Create tar.gz Archive
         if: needs.prepare.outputs.release_version != ''
