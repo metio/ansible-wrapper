@@ -1,3 +1,6 @@
+// SPDX-FileCopyrightText: The ansible-wrapper Authors
+// SPDX-License-Identifier: 0BSD
+
 use crate::ansible::model::GalaxyInstallInfoFile;
 use std::collections::BTreeMap;
 use std::fs::File;
