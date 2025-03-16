@@ -62,7 +62,7 @@ jobs:
         with:
           tool: cross
       - name: Configure cross
-        if: matrix.build.cross
+        if: matrix.cross
         run: echo "CARGO=cross" >> "$GITHUB_ENV"
       - name: Cache Dependencies
         uses: Swatinem/rust-cache@v2
