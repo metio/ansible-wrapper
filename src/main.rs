@@ -25,6 +25,11 @@ fn main() {
             run_preflight_checks();
 
             let use_ansible_from_pyproject = ansible_version_is_managed();
+            let ansible_core_dependency: String = Some(use_ansible_from_pyproject)
+                .filter(|&managed| !managed)
+                .and_then(|_| std::env::var("ANSIBLE_WRAPPER_ANSIBLE_VERSION").ok())
+                .map(|version| format!("ansible-core=={}", version))
+                .unwrap_or(String::from("ansible-core"));
 
             if !user_wants_help() && !user_wants_version() {
                 if command == "ansible-playbook" {
@@ -59,7 +64,7 @@ fn main() {
                             } else {
                                 Command::new("uvx")
                                     .arg("--from")
-                                    .arg("ansible-core")
+                                    .arg(&ansible_core_dependency)
                                     .arg("ansible-galaxy")
                                     .arg("install")
                                     .arg("-r")
@@ -88,7 +93,7 @@ fn main() {
             } else {
                 Command::new("uvx")
                     .arg("--from")
-                    .arg("ansible-core")
+                    .arg(&ansible_core_dependency)
                     .arg(command)
                     .args(std::env::args_os().skip(1))
                     .status()
