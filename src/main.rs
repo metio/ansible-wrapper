@@ -23,36 +23,38 @@ fn main() {
             run_preflight_checks();
 
             if command == "ansible-playbook" {
-                if let Some(requirements_file) = lookup_requirements_file() {
-                    let ansible_requirements = parse_ansible_requirements(&requirements_file);
-                    let mut run_ansible_galaxy_install = false;
-                    if ansible_requirements.collections.len() > 0 {
-                        let installed_ansible_collections = parse_installed_collections();
-                        run_ansible_galaxy_install |= requires_ansible_galaxy_install(
-                            installed_ansible_collections,
-                            &ansible_requirements.collections,
-                        );
-                    }
-                    if ansible_requirements.roles.len() > 0 {
-                        let installed_ansible_roles = parse_installed_roles();
-                        run_ansible_galaxy_install |= requires_ansible_galaxy_install(
-                            installed_ansible_roles,
-                            &ansible_requirements.roles,
-                        );
-                    }
-                    if run_ansible_galaxy_install {
-                        let status = Command::new("uv")
-                            .arg("run")
-                            .arg("--")
-                            .arg("ansible-galaxy")
-                            .arg("install")
-                            .arg("-r")
-                            .arg(&requirements_file)
-                            .status()
-                            .expect("Process to finish with output");
-                        let exist_code = status.code().expect("Process to return its exist code");
-                        if exist_code != 0 {
-                            panic!("ansible-galaxy was not successful")
+                if !user_wants_help() && !user_wants_version() {
+                    if let Some(requirements_file) = lookup_requirements_file() {
+                        let ansible_requirements = parse_ansible_requirements(&requirements_file);
+                        let mut run_ansible_galaxy_install = false;
+                        if ansible_requirements.collections.len() > 0 {
+                            let installed_ansible_collections = parse_installed_collections();
+                            run_ansible_galaxy_install |= requires_ansible_galaxy_install(
+                                installed_ansible_collections,
+                                &ansible_requirements.collections,
+                            );
+                        }
+                        if ansible_requirements.roles.len() > 0 {
+                            let installed_ansible_roles = parse_installed_roles();
+                            run_ansible_galaxy_install |= requires_ansible_galaxy_install(
+                                installed_ansible_roles,
+                                &ansible_requirements.roles,
+                            );
+                        }
+                        if run_ansible_galaxy_install {
+                            let status = Command::new("uv")
+                                .arg("run")
+                                .arg("--")
+                                .arg("ansible-galaxy")
+                                .arg("install")
+                                .arg("-r")
+                                .arg(&requirements_file)
+                                .status()
+                                .expect("Process to finish with output");
+                            let exist_code = status.code().expect("Process to return its exist code");
+                            if exist_code != 0 {
+                                panic!("ansible-galaxy was not successful")
+                            }
                         }
                     }
                 }
@@ -67,6 +69,14 @@ fn main() {
                 .expect("ansible command failed to start");
         }
     }
+}
+
+fn user_wants_help() -> bool {
+    std::env::args_os().any(|arg| arg == "--help" || arg == "-h")
+}
+
+fn user_wants_version() -> bool {
+    std::env::args_os().any(|arg| arg == "--version")
 }
 
 fn lookup_requirements_file() -> Option<OsString> {
