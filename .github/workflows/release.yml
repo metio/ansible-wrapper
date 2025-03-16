@@ -148,8 +148,8 @@ jobs:
         if: needs.prepare.outputs.release_version != ''
         uses: softprops/action-gh-release@v2
         with:
-          tag_name: ${{ steps.release.outputs.version }}
-          name: ${{ steps.release.outputs.version }}
+          tag_name: ${{ needs.prepare.outputs.release_version }}
+          name: ${{ needs.prepare.outputs.release_version }}
           token: ${{ secrets.GITHUB_TOKEN }}
           draft: false
           prerelease: false
