@@ -3,6 +3,7 @@
 
 use crate::ansible::galaxy::{parse_installed_collections, parse_installed_roles};
 use crate::ansible::model::{GalaxyRequirement, GalaxyRequirementsFile};
+use crate::python::model::PyProjectFile;
 use fs::File;
 use semver::{Version, VersionReq};
 use std::collections::BTreeMap;
@@ -13,6 +14,7 @@ use std::process::Command;
 use which::which;
 
 mod ansible;
+mod python;
 
 fn main() {
     match std::env::args_os().nth(0) {
@@ -21,6 +23,8 @@ fn main() {
         }
         Some(command) => {
             run_preflight_checks();
+
+            let use_ansible_from_pyproject = ansible_version_is_managed();
 
             if !user_wants_help() && !user_wants_version() {
                 if command == "ansible-playbook" {
@@ -42,15 +46,27 @@ fn main() {
                             );
                         }
                         if run_ansible_galaxy_install {
-                            let status = Command::new("uv")
-                                .arg("run")
-                                .arg("--")
-                                .arg("ansible-galaxy")
-                                .arg("install")
-                                .arg("-r")
-                                .arg(&requirements_file)
-                                .status()
-                                .expect("Process to finish with output");
+                            let status = if use_ansible_from_pyproject {
+                                Command::new("uv")
+                                    .arg("run")
+                                    .arg("--")
+                                    .arg("ansible-galaxy")
+                                    .arg("install")
+                                    .arg("-r")
+                                    .arg(&requirements_file)
+                                    .status()
+                                    .expect("Process to finish with output")
+                            } else {
+                                Command::new("uvx")
+                                    .arg("--from")
+                                    .arg("ansible-core")
+                                    .arg("ansible-galaxy")
+                                    .arg("install")
+                                    .arg("-r")
+                                    .arg(&requirements_file)
+                                    .status()
+                                    .expect("Process to finish with output")
+                            };
                             let exist_code =
                                 status.code().expect("Process to return its exist code");
                             if exist_code != 0 {
@@ -61,15 +77,37 @@ fn main() {
                 }
             }
 
-            Command::new("uv")
-                .arg("run")
-                .arg("--")
-                .arg(command)
-                .args(std::env::args_os().skip(1))
-                .status()
-                .expect("ansible command failed to start");
+            if use_ansible_from_pyproject {
+                Command::new("uv")
+                    .arg("run")
+                    .arg("--")
+                    .arg(command)
+                    .args(std::env::args_os().skip(1))
+                    .status()
+                    .expect("ansible command failed to start");
+            } else {
+                Command::new("uvx")
+                    .arg("--from")
+                    .arg("ansible-core")
+                    .arg(command)
+                    .args(std::env::args_os().skip(1))
+                    .status()
+                    .expect("ansible command failed to start");
+            }
         }
     }
+}
+
+fn ansible_version_is_managed() -> bool {
+    fs::read_to_string("pyproject.toml")
+        .ok()
+        .and_then(|file| toml::from_str::<PyProjectFile>(&file).ok())
+        .map(|pyproject: PyProjectFile| {
+            pyproject.project.dependencies.iter().any(|dependency| {
+                dependency.starts_with("ansible") || dependency.starts_with("ansible-core")
+            })
+        })
+        .unwrap_or(false)
 }
 
 fn user_wants_help() -> bool {
@@ -146,7 +184,4 @@ fn parse_ansible_requirements(requirements: &OsString) -> GalaxyRequirementsFile
 
 fn run_preflight_checks() {
     which("uv").expect("[ERROR] You need to install 'uv' first");
-    Path::new("pyproject.toml")
-        .try_exists()
-        .expect("[ERROR] You need to create a 'pyproject.toml' file first");
 }

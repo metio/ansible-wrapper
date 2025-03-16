@@ -9,9 +9,9 @@ SPDX-License-Identifier: 0BSD
 
 ## Features
 
-- Automatically downloads an appropriate Python version (using `.python-version`)
-- Automatically downloads an appropriate Ansible version (using `pyproject.toml`)
-- Automatically downloads all required Ansible collections (using `requirements.yml`, `requirements.yaml`, or what `ANSIBLE_WRAPPER_ANSIBLE_GALAXY_REQUIREMENTS_FILE` points to)
+- Automatically downloads an appropriate Python version specified in `.python-version`. If no such file exists, no Python version will be installed and whatever is currently installed on your system is being used.
+- Automatically downloads an appropriate Ansible version specified in `pyproject.toml`. If no such file exists, we are going to use the latest available Ansible version or the version set in `ANSIBLE_WRAPPER_ANSIBLE_VERSION`.
+- Automatically downloads all required Ansible collections and roles specified in `requirements.yml`, `requirements.yaml`, or what `ANSIBLE_WRAPPER_ANSIBLE_GALAXY_REQUIREMENTS_FILE` points to. If no such file exists, we are not installing/managing Ansible collections and roles.
 
 ## Installation
 
