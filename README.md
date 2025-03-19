@@ -15,11 +15,22 @@ SPDX-License-Identifier: 0BSD
 
 ## Installation
 
-Download the binary from the releases page, put it somewhere on your system and define symlinks to Ansible CLI commands:
+Run `cargo install ansible-wrapper` on your system or download the binary from the releases page and put it somewhere on your system. Once installed, either define symlinks to Ansible CLI commands like this:
 
 ```shell
 ln -s /path/to/ansible-wrapper ~/.local/bin/ansible
 ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-doc
+ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-galaxy
 ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-playbook
 ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-vault
+```
+
+Or create shell aliases like this:
+
+```shell
+alias ansible='/path/to/ansible-wrapper'
+alias ansible-doc='/path/to/ansible-wrapper doc'
+alias ansible-galaxy='/path/to/ansible-wrapper galaxy'
+alias ansible-playbook='/path/to/ansible-wrapper playbook'
+alias ansible-vault='/path/to/ansible-wrapper vault'
 ```
