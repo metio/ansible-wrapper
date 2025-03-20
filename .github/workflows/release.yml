@@ -82,13 +82,17 @@ jobs:
         name: Build Project
         if: needs.prepare.outputs.release_version != '' && matrix.cross
         run: cross build --release --target ${{ matrix.target }}
+      - id: move
+        name: Move Binary
+        if: needs.prepare.outputs.release_version
+        run: mv target/${{ matrix.target }}/release/ansible-wrapper ./ansible-wrapper
       - id: tar
         name: Create tar.gz Archive
         if: needs.prepare.outputs.release_version != ''
         run: >
           tar --create --gzip
           --file ansible-wrapper-${{ matrix.target }}.tar.gz
-          target/${{ matrix.target }}/release/ansible-wrapper
+          ansible-wrapper
           LICENSE
           README.md
       - id: upload
