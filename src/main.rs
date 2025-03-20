@@ -37,7 +37,7 @@ fn main() {
                         &galaxy_requirements.collections,
                     );
                 }
-                if galaxy_requirements.roles.len() > 0 {
+                if !run_ansible_galaxy_install && galaxy_requirements.roles.len() > 0 {
                     let installed_galaxy_roles = parse_installed_roles();
                     run_ansible_galaxy_install |= requires_ansible_galaxy_install(
                         installed_galaxy_roles,
