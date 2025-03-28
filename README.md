@@ -19,9 +19,13 @@ Run `cargo install ansible-wrapper` on your system or download the binary from t
 
 ```shell
 ln -s /path/to/ansible-wrapper ~/.local/bin/ansible
+ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-config
+ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-console
 ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-doc
 ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-galaxy
+ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-inventory
 ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-playbook
+ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-pull
 ln -s /path/to/ansible-wrapper ~/.local/bin/ansible-vault
 ```
 
@@ -29,8 +33,26 @@ Or create shell aliases like this:
 
 ```shell
 alias ansible='/path/to/ansible-wrapper'
+alias ansible-doc='/path/to/ansible-wrapper config'
+alias ansible-doc='/path/to/ansible-wrapper console'
 alias ansible-doc='/path/to/ansible-wrapper doc'
 alias ansible-galaxy='/path/to/ansible-wrapper galaxy'
+alias ansible-galaxy='/path/to/ansible-wrapper inventory'
 alias ansible-playbook='/path/to/ansible-wrapper playbook'
+alias ansible-playbook='/path/to/ansible-wrapper pull'
 alias ansible-vault='/path/to/ansible-wrapper vault'
+```
+
+Or simply call the wrapper directly like this:
+
+```shell
+/path/to/ansible-wrapper ...
+/path/to/ansible-wrapper config ...
+/path/to/ansible-wrapper console ...
+/path/to/ansible-wrapper doc ...
+/path/to/ansible-wrapper galaxy ...
+/path/to/ansible-wrapper inventory ...
+/path/to/ansible-wrapper playbook ...
+/path/to/ansible-wrapper pull ...
+/path/to/ansible-wrapper vault ...
 ```

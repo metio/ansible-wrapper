@@ -107,24 +107,31 @@ fn determine_ansible_command_and_arguments() -> (OsString, Skip<ArgsOs>) {
         .nth(0)
         .filter(|command| !PathBuf::from(command).ends_with("ansible-wrapper"))
         .map(|command| (command, 1))
-        .or_else(|| std::env::args_os().nth(0)
-            .filter(|command| PathBuf::from(command).ends_with("ansible-wrapper"))
-            .and_then(|_| {
-                std::env::args_os()
-                    .nth(1)
-                    .filter(|subcommand| {
-                        subcommand == "doc"
-                            || subcommand == "galaxy"
-                            || subcommand == "playbook"
-                            || subcommand == "vault"
-                    })
-                    .map(|subcommand| {
-                        let mut ansible_command = OsString::from("ansible-");
-                        ansible_command.push(subcommand);
-                        ansible_command
-                    })
-                    .map(|ansible_command| (ansible_command, 2))
-            }))
+        .or_else(|| {
+            std::env::args_os()
+                .nth(0)
+                .filter(|command| PathBuf::from(command).ends_with("ansible-wrapper"))
+                .and_then(|_| {
+                    std::env::args_os()
+                        .nth(1)
+                        .filter(|subcommand| {
+                            subcommand == "config"
+                                || subcommand == "console"
+                                || subcommand == "doc"
+                                || subcommand == "galaxy"
+                                || subcommand == "inventory"
+                                || subcommand == "playbook"
+                                || subcommand == "pull"
+                                || subcommand == "vault"
+                        })
+                        .map(|subcommand| {
+                            let mut ansible_command = OsString::from("ansible-");
+                            ansible_command.push(subcommand);
+                            ansible_command
+                        })
+                        .map(|ansible_command| (ansible_command, 2))
+                })
+        })
         .unwrap_or_else(|| (OsString::from("ansible"), 1));
 
     (command, std::env::args_os().skip(argument_index))
@@ -133,7 +140,9 @@ fn determine_ansible_command_and_arguments() -> (OsString, Skip<ArgsOs>) {
 fn ansible_command_uses_galaxy_dependencies(ansible_command: &OsString) -> bool {
     !std::env::args_os().any(|arg| arg == "--help" || arg == "-h")
         && !std::env::args_os().any(|arg| arg == "--version")
-        && ansible_command == "ansible-playbook"
+        && (ansible_command == "ansible-playbook"
+            || ansible_command == "ansible-console"
+            || ansible_command == "ansible-pull")
 }
 
 fn ansible_version_is_managed() -> bool {
