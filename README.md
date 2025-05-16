@@ -33,8 +33,8 @@ Or create shell aliases like this:
 
 ```shell
 alias ansible='/path/to/ansible-wrapper'
-alias ansible-doc='/path/to/ansible-wrapper config'
-alias ansible-doc='/path/to/ansible-wrapper console'
+alias ansible-config='/path/to/ansible-wrapper config'
+alias ansible-console='/path/to/ansible-wrapper console'
 alias ansible-doc='/path/to/ansible-wrapper doc'
 alias ansible-galaxy='/path/to/ansible-wrapper galaxy'
 alias ansible-galaxy='/path/to/ansible-wrapper inventory'
