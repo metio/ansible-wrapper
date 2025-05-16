@@ -6,7 +6,7 @@ name = "ansible-wrapper"
 version = "0.0.0"
 authors = ["Sebastian Hoß <seb@xn--ho-hia.de>"]
 edition = "2024"
-rust-version = "1.85.0"
+rust-version = "1.87.0"
 description = "Wrapper around various Ansible commands to automatically manage dependencies"
 readme = "README.md"
 license = "0BSD"
@@ -16,6 +16,7 @@ homepage = "https://github.com/metio/ansible-wrapper"
 repository = "https://github.com/metio/ansible-wrapper"
 
 [dependencies]
+anyhow = { version = "1.0.98" }
 rust-ini = { version = "0.21" }
 semver = { version = "1.0.26" }
 serde = { version = "1.0.219", features = ["derive"] }

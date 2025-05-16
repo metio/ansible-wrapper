@@ -13,14 +13,15 @@ use std::fs;
 use std::iter::Skip;
 use std::path::PathBuf;
 use std::process::Command;
+use anyhow::Context;
 use which::which;
 
 mod ansible;
 mod python;
 
-fn main() {
-    which("uv").expect("[ERROR] You must have 'uv' installed on your system");
-    which("uvx").expect("[ERROR] You must have 'uvx' installed on your system");
+fn main() -> anyhow::Result<()> {
+    which("uv").context("[ERROR] You must have 'uv' installed on your system")?;
+    which("uvx").context("[ERROR] You must have 'uvx' installed on your system")?;
 
     let (ansible_command, ansible_arguments) = determine_ansible_command_and_arguments();
 
@@ -30,17 +31,17 @@ fn main() {
         if let Some(requirements_file) = lookup_galaxy_requirements_file() {
             if let Some(galaxy_requirements) = parse_galaxy_requirements(&requirements_file) {
                 let mut run_ansible_galaxy_install = false;
-                if galaxy_requirements.collections.len() > 0 {
-                    let installed_galaxy_collections = parse_installed_collections();
+                if !galaxy_requirements.collections.is_empty() {
+                    let installed_galaxy_collections = parse_installed_collections()?;
                     run_ansible_galaxy_install |= requires_ansible_galaxy_install(
-                        installed_galaxy_collections,
+                        &installed_galaxy_collections,
                         &galaxy_requirements.collections,
                     );
                 }
-                if !run_ansible_galaxy_install && galaxy_requirements.roles.len() > 0 {
-                    let installed_galaxy_roles = parse_installed_roles();
+                if !run_ansible_galaxy_install && !galaxy_requirements.roles.is_empty() {
+                    let installed_galaxy_roles = parse_installed_roles()?;
                     run_ansible_galaxy_install |= requires_ansible_galaxy_install(
-                        installed_galaxy_roles,
+                        &installed_galaxy_roles,
                         &galaxy_requirements.roles,
                     );
                 }
@@ -53,8 +54,7 @@ fn main() {
                             .arg("install")
                             .arg("-r")
                             .arg(&requirements_file)
-                            .status()
-                            .expect("Process to finish with output")
+                            .status()?
                     } else {
                         Command::new("uvx")
                             .arg("--from")
@@ -63,13 +63,10 @@ fn main() {
                             .arg("install")
                             .arg("-r")
                             .arg(&requirements_file)
-                            .status()
-                            .expect("Process to finish with output")
+                            .status()?
                     };
-                    let exist_code = status.code().expect("Process to return its exist code");
-                    if exist_code != 0 {
-                        panic!("ansible-galaxy was not successful")
-                    }
+                    let exist_code = status.code().unwrap_or(0);
+                    assert!(exist_code == 0, "ansible-galaxy was not successful");
                 }
             }
         }
@@ -81,35 +78,34 @@ fn main() {
             .arg("--")
             .arg(ansible_command)
             .args(ansible_arguments)
-            .status()
-            .expect("ansible command failed to start");
+            .status()?;
     } else {
         Command::new("uvx")
             .arg("--from")
             .arg(ansible_core_package(use_ansible_from_pyproject))
             .arg(ansible_command)
             .args(ansible_arguments)
-            .status()
-            .expect("ansible command failed to start");
+            .status()?;
     }
+    
+    Ok(())
 }
 
 fn ansible_core_package(use_ansible_from_pyproject: bool) -> String {
     Some(use_ansible_from_pyproject)
         .filter(|&managed| !managed)
         .and_then(|_| std::env::var("ANSIBLE_WRAPPER_ANSIBLE_VERSION").ok())
-        .map(|version| format!("ansible-core=={}", version))
-        .unwrap_or(String::from("ansible-core"))
+        .map_or_else(|| String::from("ansible-core"), |version| format!("ansible-core=={version}"))
 }
 
 fn determine_ansible_command_and_arguments() -> (OsString, Skip<ArgsOs>) {
     let (command, argument_index) = std::env::args_os()
-        .nth(0)
+        .next()
         .filter(|command| !PathBuf::from(command).ends_with("ansible-wrapper"))
         .map(|command| (command, 1))
         .or_else(|| {
             std::env::args_os()
-                .nth(0)
+                .next()
                 .filter(|command| PathBuf::from(command).ends_with("ansible-wrapper"))
                 .and_then(|_| {
                     std::env::args_os()
@@ -149,12 +145,11 @@ fn ansible_version_is_managed() -> bool {
     fs::read_to_string("pyproject.toml")
         .ok()
         .and_then(|file| toml::from_str::<PyProjectFile>(&file).ok())
-        .map(|pyproject: PyProjectFile| {
+        .is_some_and(|pyproject: PyProjectFile| {
             pyproject.project.dependencies.iter().any(|dependency| {
                 dependency.starts_with("ansible") || dependency.starts_with("ansible-core")
             })
         })
-        .unwrap_or(false)
 }
 
 fn lookup_galaxy_requirements_file() -> Option<OsString> {
@@ -162,7 +157,7 @@ fn lookup_galaxy_requirements_file() -> Option<OsString> {
         .map(PathBuf::from)
         .or_else(|| Some(PathBuf::from("requirements.yml")).filter(|path| path.exists()))
         .or_else(|| Some(PathBuf::from("requirements.yaml")).filter(|path| path.exists()))
-        .map(|path| path.into_os_string())
+        .map(PathBuf::into_os_string)
 }
 
 fn parse_galaxy_requirements(requirements: &OsString) -> Option<GalaxyRequirementsFile> {
@@ -172,23 +167,22 @@ fn parse_galaxy_requirements(requirements: &OsString) -> Option<GalaxyRequiremen
 }
 
 fn requires_ansible_galaxy_install(
-    installed_ansible_collections: BTreeMap<String, BTreeMap<String, Vec<String>>>,
+    installed_ansible_collections: &BTreeMap<String, BTreeMap<String, Vec<String>>>,
     ansible_requirements: &Vec<GalaxyRequirement>,
 ) -> bool {
     for requirement in ansible_requirements {
         let mut found_installed_version = false;
-        for (_, installed_collections) in &installed_ansible_collections {
+        for installed_collections in installed_ansible_collections.values() {
             found_installed_version |= installed_collections
                 .get(&requirement.name)
-                .map(|installed_collections| {
+                .is_some_and(|installed_collections| {
                     installed_collections.iter().any(|installed_version| {
                         installed_version_fulfills_requirement(
                             installed_version,
                             &requirement.version,
                         )
                     })
-                })
-                .unwrap_or(false);
+                });
         }
         if !found_installed_version {
             return true;

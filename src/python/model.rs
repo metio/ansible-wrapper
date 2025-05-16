@@ -4,11 +4,11 @@
 use serde::Deserialize;
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct PyProjectFile {
+pub struct PyProjectFile {
     pub(crate) project: Project,
 }
 
 #[derive(Deserialize, Debug)]
-pub(crate) struct Project {
+pub struct Project {
     pub(crate) dependencies: Vec<String>,
 }

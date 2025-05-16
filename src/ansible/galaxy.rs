@@ -6,7 +6,7 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::PathBuf;
 
-pub(crate) fn parse_installed_collections() -> BTreeMap<String, BTreeMap<String, Vec<String>>> {
+pub fn parse_installed_collections() -> anyhow::Result<BTreeMap<String, BTreeMap<String, Vec<String>>>> {
     let collections_path = std::env::var_os("ANSIBLE_COLLECTIONS_PATH")
         .map(PathBuf::from)
         .or_else(|| {
@@ -43,19 +43,18 @@ pub(crate) fn parse_installed_collections() -> BTreeMap<String, BTreeMap<String,
         BTreeMap::new();
     for collection_path in paths_to_check {
         if collection_path.exists() {
-            let paths = std::fs::read_dir(&collection_path).expect("Failed to read directory");
+            let paths = std::fs::read_dir(&collection_path)?;
             for path in paths {
-                let entry = path.expect("failed to read directory entry");
+                let entry = path?;
                 if let Some(extension) = entry.path().extension() {
                     if extension == "info" {
                         let galaxy_info = entry.path().join("GALAXY.yml");
                         if galaxy_info.exists() {
-                            let file = File::open(galaxy_info).expect("file should open read only");
-                            let info: GalaxyInstallInfoFile = serde_yaml_ng::from_reader(file)
-                                .expect("[ERROR] Cannot parse GALAXY.yml file");
+                            let file = File::open(galaxy_info)?;
+                            let info: GalaxyInstallInfoFile = serde_yaml_ng::from_reader(file)?;
                             installed_collections
                                 .entry(collection_path.to_string_lossy().into_owned())
-                                .or_insert_with(BTreeMap::new)
+                                .or_default()
                                 .entry(
                                     entry
                                         .file_name()
@@ -63,7 +62,7 @@ pub(crate) fn parse_installed_collections() -> BTreeMap<String, BTreeMap<String,
                                         .into_owned()
                                         .replace(&format!("-{}.info", info.version), ""),
                                 )
-                                .or_insert_with(Vec::new)
+                                .or_default()
                                 .push(info.version);
                         }
                     }
@@ -72,10 +71,10 @@ pub(crate) fn parse_installed_collections() -> BTreeMap<String, BTreeMap<String,
         }
     }
 
-    installed_collections
+    Ok(installed_collections)
 }
 
-pub(crate) fn parse_installed_roles() -> BTreeMap<String, BTreeMap<String, Vec<String>>> {
+pub fn parse_installed_roles() -> anyhow::Result<BTreeMap<String, BTreeMap<String, Vec<String>>>> {
     let roles_path = std::env::var_os("ANSIBLE_ROLES_PATH")
         .map(PathBuf::from)
         .or_else(|| {
@@ -109,24 +108,23 @@ pub(crate) fn parse_installed_roles() -> BTreeMap<String, BTreeMap<String, Vec<S
     let mut installed_roles: BTreeMap<String, BTreeMap<String, Vec<String>>> = BTreeMap::new();
     for role_path in paths_to_check {
         if role_path.exists() {
-            let paths = std::fs::read_dir(&role_path).expect("Failed to read directory");
+            let paths = std::fs::read_dir(&role_path)?;
             for path in paths {
-                let entry = path.expect("failed to read directory entry");
+                let entry = path?;
                 let galaxy_info = entry.path().join("meta/.galaxy_install_info");
                 if galaxy_info.exists() {
-                    let file = File::open(galaxy_info).expect("file should open read only");
-                    let info: GalaxyInstallInfoFile = serde_yaml_ng::from_reader(file)
-                        .expect("[ERROR] Cannot parse output of 'ansible-galaxy collection list'");
+                    let file = File::open(galaxy_info)?;
+                    let info: GalaxyInstallInfoFile = serde_yaml_ng::from_reader(file)?;
                     installed_roles
                         .entry(role_path.to_string_lossy().into_owned())
-                        .or_insert_with(BTreeMap::new)
+                        .or_default()
                         .entry(entry.file_name().to_string_lossy().into_owned())
-                        .or_insert_with(Vec::new)
+                        .or_default()
                         .push(info.version);
                 }
             }
         }
     }
 
-    installed_roles
+    Ok(installed_roles)
 }
