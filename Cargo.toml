@@ -19,7 +19,7 @@ repository = "https://github.com/metio/ansible-wrapper"
 anyhow = { version = "1.0.99" }
 rust-ini = { version = "0.21" }
 semver = { version = "1.0.26" }
-serde = { version = "1.0.219", features = ["derive"] }
+serde = { version = "1.0.224", features = ["derive"] }
 serde_yaml_ng = { version = "0.10.0" }
 which = { version = "8.0.0" }
 toml = { version = "0.9.6" }
