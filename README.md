@@ -5,7 +5,7 @@ SPDX-License-Identifier: 0BSD
 
 # ansible-wrapper
 
-`ansible-wrapper` is a wrapper various Ansible commands using `uv` to automatically download both Python dependencies and required Ansible collections.
+`ansible-wrapper` is a wrapper around various Ansible commands which uses `uv` to automatically downloads Python, project dependencies, as well as Ansible collections and roles.
 
 ## Features
 
