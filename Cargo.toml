@@ -16,7 +16,7 @@ homepage = "https://github.com/metio/ansible-wrapper"
 repository = "https://github.com/metio/ansible-wrapper"
 
 [dependencies]
-anyhow = { version = "1.0.99" }
+anyhow = { version = "1.0.100" }
 rust-ini = { version = "0.21" }
 semver = { version = "1.0.27" }
 serde = { version = "1.0.225", features = ["derive"] }
