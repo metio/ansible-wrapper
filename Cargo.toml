@@ -22,7 +22,7 @@ semver = { version = "1.0.27" }
 serde = { version = "1.0.228", features = ["derive"] }
 serde_yaml_ng = { version = "0.10.0" }
 which = { version = "8.0.0" }
-toml = { version = "1.0.0" }
+toml = { version = "1.0.1" }
 
 [profile.release]
 lto = "fat"
