@@ -1,6 +1,16 @@
 # SPDX-FileCopyrightText: The ansible-wrapper Authors
 # SPDX-License-Identifier: 0BSD
 
+.idea/
+*.iml
+*.ipr
+*.iws
+.vscode/
+.project
+.classpath
+.DS_Store
+.claude/settings.local.json
+target/
 target
 .venv
 pyproject.toml
