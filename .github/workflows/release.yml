@@ -17,7 +17,7 @@ jobs:
     steps:
       - id: checkout
         name: Clone Git Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           fetch-depth: 0
       - id: last_release
@@ -55,18 +55,18 @@ jobs:
       - id: checkout
         name: Clone Git Repository
         if: needs.prepare.outputs.release_version != ''
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         if: needs.prepare.outputs.release_version != ''
         with:
           targets: aarch64-apple-darwin,aarch64-unknown-linux-gnu,x86_64-apple-darwin,x86_64-unknown-linux-gnu
       - name: Install cross
-        uses: taiki-e/install-action@v2.87.29
+        uses: taiki-e/install-action@5488ac5a951645ce95062214902ac4b6bc1a1037 # v2.87.32
         with:
           tool: cross
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         if: needs.prepare.outputs.release_version != ''
         with:
           key: ${{ matrix.target }}
@@ -98,7 +98,7 @@ jobs:
       - id: upload
         name: Upload Artifact
         if: needs.prepare.outputs.release_version != ''
-        uses: actions/upload-artifact@v7
+        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ansible-wrapper-${{ matrix.target }}
           path: ansible-wrapper-${{ matrix.target }}.tar.gz
@@ -111,18 +111,18 @@ jobs:
     steps:
       - id: checkout
         name: Clone Git Repository
-        uses: actions/checkout@v7
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         if: needs.prepare.outputs.release_version != ''
       - name: Set up Rust
-        uses: dtolnay/rust-toolchain@stable
+        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
         if: needs.prepare.outputs.release_version != ''
       - name: Cache Dependencies
-        uses: Swatinem/rust-cache@v2
+        uses: Swatinem/rust-cache@d1527c8f67ef9af357290475d4af4b0fab8f12e0 # v2
         if: needs.prepare.outputs.release_version != ''
       - id: download
         name: Download Artifacts
         if: needs.prepare.outputs.release_version != ''
-        uses: actions/download-artifact@v7
+        uses: actions/download-artifact@37930b1c2abaa49bbe596cd826c3c89aef350131 # v7
         with:
           path: dist
           pattern: ansible-wrapper-*
@@ -134,7 +134,7 @@ jobs:
         working-directory: dist
       - id: import_gpg
         name: Import GPG key
-        uses: crazy-max/ghaction-import-gpg@v6
+        uses: crazy-max/ghaction-import-gpg@e89d40939c28e39f97cf32126055eeae86ba74ec # v6
         if: needs.prepare.outputs.release_version != ''
         with:
           gpg_private_key: ${{ secrets.GPG_SECRET_KEY_BASE64 }}
@@ -152,7 +152,7 @@ jobs:
       - id: create_release
         name: Create Release
         if: needs.prepare.outputs.release_version != ''
-        uses: softprops/action-gh-release@v3
+        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
         with:
           tag_name: ${{ needs.prepare.outputs.release_version }}
           name: ${{ needs.prepare.outputs.release_version }}
@@ -181,7 +181,7 @@ jobs:
       - id: mail
         name: Send Mail
         if: needs.prepare.outputs.release_version != ''
-        uses: dawidd6/action-send-mail@v23
+        uses: dawidd6/action-send-mail@47af4a10b540781705f283a2cf1a9650713ac795 # v23
         with:
           server_address: ${{ secrets.MAIL_SERVER }}
           server_port: ${{ secrets.MAIL_PORT }}
@@ -194,7 +194,7 @@ jobs:
       - id: matrix
         name: Send Matrix Message
         if: needs.prepare.outputs.release_version != ''
-        uses: s3krit/matrix-message-action@v0.0.3
+        uses: s3krit/matrix-message-action@70ad3fb812ee0e45ff8999d6af11cafad11a6ecf # v0.0.3
         with:
           room_id: ${{ secrets.MATRIX_ROOM_ID }}
           access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
