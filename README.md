@@ -1,7 +1,7 @@
 <!--
 SPDX-FileCopyrightText: The ansible-wrapper Authors
 SPDX-License-Identifier: 0BSD
- -->
+-->
 
 # ansible-wrapper
 
@@ -56,3 +56,7 @@ Or simply call the wrapper directly like this:
 /path/to/ansible-wrapper pull ...
 /path/to/ansible-wrapper vault ...
 ```
+
+## License
+
+[0BSD](LICENSES/0BSD.txt).
