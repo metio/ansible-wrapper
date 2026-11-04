@@ -4,6 +4,7 @@
 use crate::ansible::galaxy::{parse_installed_collections, parse_installed_roles};
 use crate::ansible::model::{GalaxyRequirement, GalaxyRequirementsFile};
 use crate::python::model::PyProjectFile;
+use anyhow::Context;
 use fs::File;
 use semver::{Version, VersionReq};
 use std::collections::BTreeMap;
@@ -13,7 +14,6 @@ use std::fs;
 use std::iter::Skip;
 use std::path::PathBuf;
 use std::process::Command;
-use anyhow::Context;
 use which::which;
 
 mod ansible;
@@ -87,7 +87,7 @@ fn main() -> anyhow::Result<()> {
             .args(ansible_arguments)
             .status()?;
     }
-    
+
     Ok(())
 }
 
@@ -95,7 +95,10 @@ fn ansible_core_package(use_ansible_from_pyproject: bool) -> String {
     Some(use_ansible_from_pyproject)
         .filter(|&managed| !managed)
         .and_then(|_| std::env::var("ANSIBLE_WRAPPER_ANSIBLE_VERSION").ok())
-        .map_or_else(|| String::from("ansible-core"), |version| format!("ansible-core=={version}"))
+        .map_or_else(
+            || String::from("ansible-core"),
+            |version| format!("ansible-core=={version}"),
+        )
 }
 
 fn determine_ansible_command_and_arguments() -> (OsString, Skip<ArgsOs>) {
@@ -173,16 +176,17 @@ fn requires_ansible_galaxy_install(
     for requirement in ansible_requirements {
         let mut found_installed_version = false;
         for installed_collections in installed_ansible_collections.values() {
-            found_installed_version |= installed_collections
-                .get(&requirement.name)
-                .is_some_and(|installed_collections| {
-                    installed_collections.iter().any(|installed_version| {
-                        installed_version_fulfills_requirement(
-                            installed_version,
-                            &requirement.version,
-                        )
-                    })
-                });
+            found_installed_version |=
+                installed_collections
+                    .get(&requirement.name)
+                    .is_some_and(|installed_collections| {
+                        installed_collections.iter().any(|installed_version| {
+                            installed_version_fulfills_requirement(
+                                installed_version,
+                                &requirement.version,
+                            )
+                        })
+                    });
         }
         if !found_installed_version {
             return true;

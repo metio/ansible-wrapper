@@ -6,7 +6,8 @@ use std::collections::BTreeMap;
 use std::fs::File;
 use std::path::PathBuf;
 
-pub fn parse_installed_collections() -> anyhow::Result<BTreeMap<String, BTreeMap<String, Vec<String>>>> {
+pub fn parse_installed_collections()
+-> anyhow::Result<BTreeMap<String, BTreeMap<String, Vec<String>>>> {
     let collections_path = std::env::var_os("ANSIBLE_COLLECTIONS_PATH")
         .map(PathBuf::from)
         .or_else(|| {
