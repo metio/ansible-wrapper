@@ -5,7 +5,7 @@ name: Verify Commits
 on:
   merge_group:
   pull_request:
-    branches: [ main ]
+    branches: [main]
 permissions:
   contents: read
 
@@ -16,6 +16,8 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+        with:
+          persist-credentials: false
       - name: Set up Rust
         uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
       - name: Cache Dependencies
@@ -24,9 +26,12 @@ jobs:
         run: cargo check
       - name: Test Code
         run: cargo test
+  lint:
+    name: Lint
+    uses: metio/ci/.github/workflows/lint.yml@ae0e705ebcf7129d3f8e15699a6941b6a86e0742 # metio/ci#95
   verify:
     name: Verify
-    needs: [check]
+    needs: [check, lint]
     if: always()
     runs-on: ubuntu-latest
     timeout-minutes: 10
