@@ -1,179 +1,161 @@
 # SPDX-FileCopyrightText: The ansible-wrapper Authors
 # SPDX-License-Identifier: 0BSD
 
-name: Automated Release
+name: Release
 on:
   schedule:
-    - cron: 32 4 * * SUN
+    - cron: 53 11 * * 3
   workflow_dispatch:
 permissions:
   contents: read
-
+concurrency:
+  group: ${{ github.workflow }}
+  cancel-in-progress: false
 jobs:
   prepare:
     name: Prepare Release
     runs-on: ubuntu-latest
     timeout-minutes: 30
     outputs:
-      commit_count: ${{ steps.commits.outputs.count }}
       release_version: ${{ steps.release.outputs.version }}
-      previous_version: ${{ steps.last_release.outputs.tag }}
     steps:
-      - id: checkout
-        name: Clone Git Repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
-          persist-credentials: false
           fetch-depth: 0
+          persist-credentials: false
       - id: last_release
-        name: Fetch last release info
-        run: echo "tag=$(gh release view --json tagName --jq '.tagName')" >> "$GITHUB_OUTPUT"
+        name: Fetch Last Release
+        run: echo "tag=$(gh release view --json tagName --jq '.tagName' || true)" >> "$GITHUB_OUTPUT"
         env:
-          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+          GH_TOKEN: ${{ github.token }}
       - id: commits
         name: Count Commits
-        run: echo "count=$(git rev-list --count ${{ steps.last_release.outputs.tag }}..HEAD -- src Cargo.lock)" >> "$GITHUB_OUTPUT"
+        run: |
+          if [ -n "$LAST_RELEASE" ]; then range="$LAST_RELEASE..HEAD"; else range=HEAD; fi
+          # shellcheck disable=SC2086 # PATHS is deliberately word-split
+          echo "count=$(git rev-list --count "$range" -- $PATHS)" >> "$GITHUB_OUTPUT"
+        env:
+          LAST_RELEASE: ${{ steps.last_release.outputs.tag }}
+          PATHS: src Cargo.lock
       - id: release
         name: Create Release Version
-        if: steps.commits.outputs.count > 0 || steps.last_release.outputs.tag == ''
+        if: steps.commits.outputs.count > 0
         run: echo "version=$(date +'%Y.%-m.%-d')" >> "$GITHUB_OUTPUT"
   build:
     name: Build ${{ matrix.target }}
     needs: prepare
+    if: needs.prepare.outputs.release_version != ''
     runs-on: ${{ matrix.os }}
     timeout-minutes: 60
     strategy:
       matrix:
         include:
           - target: aarch64-apple-darwin
-            os: macOS-latest
-            cross: true
+            os: macos-latest
+            cross: false
           - target: aarch64-unknown-linux-gnu
             os: ubuntu-latest
             cross: true
           - target: x86_64-apple-darwin
-            os: macOS-latest
-            cross: true
+            os: macos-latest
+            cross: false
           - target: x86_64-unknown-linux-gnu
             os: ubuntu-latest
             cross: false
+    env:
+      TARGET: ${{ matrix.target }}
+      VERSION: ${{ needs.prepare.outputs.release_version }}
     steps:
-      - id: checkout
-        name: Clone Git Repository
-        if: needs.prepare.outputs.release_version != ''
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-        if: needs.prepare.outputs.release_version != ''
-        with:
-          targets: aarch64-apple-darwin,aarch64-unknown-linux-gnu,x86_64-apple-darwin,x86_64-unknown-linux-gnu
+      - name: Install the linkers
+        if: startsWith(matrix.os, 'ubuntu') && !matrix.cross
+        run: |
+          case "$TARGET" in
+            aarch64-unknown-linux-gnu)  sudo apt-get -y update; sudo apt-get -y install gcc-aarch64-linux-gnu ;;
+            aarch64-unknown-linux-musl) sudo apt-get -y update; sudo apt-get -y install gcc-aarch64-linux-gnu musl-tools ;;
+            x86_64-unknown-linux-musl)  sudo apt-get -y update; sudo apt-get -y install musl-tools ;;
+          esac
+      - name: Point cargo at the linkers
+        if: startsWith(matrix.os, 'ubuntu') && !matrix.cross
+        run: |
+          case "$TARGET" in
+            aarch64-unknown-linux-gnu)
+              echo JEMALLOC_SYS_WITH_LG_PAGE=16 >> "$GITHUB_ENV" ;;
+            aarch64-unknown-linux-musl)
+              echo CC=aarch64-linux-gnu-gcc >> "$GITHUB_ENV"
+              echo CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_LINKER=aarch64-linux-gnu-gcc >> "$GITHUB_ENV"
+              echo CARGO_TARGET_AARCH64_UNKNOWN_LINUX_MUSL_RUSTFLAGS="-Clink-self-contained=yes -Clinker=rust-lld" >> "$GITHUB_ENV"
+              echo JEMALLOC_SYS_WITH_LG_PAGE=16 >> "$GITHUB_ENV" ;;
+          esac
       - name: Install cross
+        if: matrix.cross
         uses: taiki-e/install-action@68a389c788b2cd04016ce8c80ee23b80d2ab3d68 # v2.88.1
         with:
           tool: cross
-      - id: versioning
-        name: Modify release version
-        if: needs.prepare.outputs.release_version != ''
-        run: sed -i -e '0,/authors/s/^version = .*/version = "${{ needs.prepare.outputs.release_version }}"/' Cargo.toml
-      - id: build
-        name: Build Project
-        if: needs.prepare.outputs.release_version != '' && !matrix.cross
-        run: cargo build --release --target ${{ matrix.target }}
-      - id: cross
-        name: Build Project
-        if: needs.prepare.outputs.release_version != '' && matrix.cross
-        run: cross build --release --target ${{ matrix.target }}
-      - id: move
-        name: Move Binary
-        if: needs.prepare.outputs.release_version
-        run: mv target/${{ matrix.target }}/release/ansible-wrapper ./ansible-wrapper
-      - id: tar
-        name: Create tar.gz Archive
-        if: needs.prepare.outputs.release_version != ''
-        run: >
-          tar --create --gzip
-          --file ansible-wrapper-${{ matrix.target }}.tar.gz
-          ansible-wrapper
-          LICENSE
-          README.md
-      - id: upload
-        name: Upload Artifact
-        if: needs.prepare.outputs.release_version != ''
-        uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
+      - name: Set the release version
+        shell: bash
+        run: sed -i -e "0,/authors/s/^version = .*/version = \"$VERSION\"/" Cargo.toml
+      - name: Build
+        shell: bash
+        run: |
+          if [ "$CROSS" = true ]; then
+            cross build --release --target "$TARGET"
+          else
+            rustup target add "$TARGET"
+            cargo build --release --target "$TARGET"
+          fi
+        env:
+          CROSS: ${{ matrix.cross }}
+      - name: Archive
+        shell: bash
+        run: |
+          binary=ansible-wrapper
+          case "$TARGET" in *windows*) binary="$binary.exe" ;; esac
+          mv "target/$TARGET/release/$binary" "./$binary"
+          tar --create --gzip --file "ansible-wrapper-$TARGET.tar.gz" "$binary" LICENSE README.md
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7
         with:
           name: ansible-wrapper-${{ matrix.target }}
           path: ansible-wrapper-${{ matrix.target }}.tar.gz
   release:
-    name: Perform Release
+    name: GitHub Release
     needs: [prepare, build]
     runs-on: ubuntu-latest
     timeout-minutes: 30
     permissions:
       contents: write
       id-token: write # cosign keyless sign-blob
+    env:
+      VERSION: ${{ needs.prepare.outputs.release_version }}
     steps:
-      - id: checkout
-        name: Clone Git Repository
-        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7
         with:
           persist-credentials: false
-        if: needs.prepare.outputs.release_version != ''
-      - name: Set up Rust
-        uses: dtolnay/rust-toolchain@b725eda525362e7cf34af9a7243cac1e3f01a7ec # stable
-        if: needs.prepare.outputs.release_version != ''
-      - id: download
-        name: Download Artifacts
-        if: needs.prepare.outputs.release_version != ''
-        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
+      - uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8
         with:
           path: dist
           pattern: ansible-wrapper-*
           merge-multiple: true
-      - id: checksums
-        name: Calculate Checksums
-        if: needs.prepare.outputs.release_version != ''
+      - name: Calculate Checksums
         run: sha256sum ./*.tar.gz > SHA256SUMS
         working-directory: dist
-      - id: sign_checksums
-        name: Sign Checksums
-        if: needs.prepare.outputs.release_version != ''
-        uses: metio/ci/cosign-sign-blob@bfcb1a4d37c4fd4d5d9c27181191dcad0d04f90c # 2026.11.1211658
+      - uses: metio/ci/cosign-sign-blob@bfcb1a4d37c4fd4d5d9c27181191dcad0d04f90c # 2026.11.1211658
         with:
           file: dist/SHA256SUMS
-      - id: create_release
-        name: Create Release
-        if: needs.prepare.outputs.release_version != ''
-        uses: softprops/action-gh-release@efb35369e0ad2afab669f228072c1b0d510eae64 # v3
-        with:
-          tag_name: ${{ needs.prepare.outputs.release_version }}
-          name: ${{ needs.prepare.outputs.release_version }}
-          token: ${{ secrets.GITHUB_TOKEN }}
-          draft: false
-          prerelease: false
-          generate_release_notes: true
-          files: |
-            dist/*.tar.gz
-            dist/SHA256SUMS
-            dist/SHA256SUMS.bundle
-      - id: versioning
-        name: Modify release version
-        if: needs.prepare.outputs.release_version != ''
-        run: sed -i -e '0,/authors/s/^version = .*/version = "${{ needs.prepare.outputs.release_version }}"/' Cargo.toml
-      - name: Publish to crates.io
-        if: needs.prepare.outputs.release_version != ''
-        run: >
-          cargo publish
-          --allow-dirty
-          --token ${{ secrets.CRATES_IO_TOKEN }}
-          --jobs 1
-          --no-verify
+      - name: Create Release
+        run: gh release create "$VERSION" --target "$GITHUB_SHA" --title "$VERSION" --generate-notes dist/*
         env:
-          RUSTFLAGS: "-A warnings"
-      - id: mail
-        name: Send Mail
-        if: needs.prepare.outputs.release_version != ''
+          GH_TOKEN: ${{ github.token }}
+      - name: Publish to crates.io
+        run: |
+          sed -i -e "0,/authors/s/^version = .*/version = \"$VERSION\"/" Cargo.toml
+          cargo publish --allow-dirty --jobs 1 --no-verify
+        env:
+          CARGO_REGISTRY_TOKEN: ${{ secrets.CRATES_IO_TOKEN }}
+          RUSTFLAGS: -A warnings
+      - name: Send Mail
         uses: dawidd6/action-send-mail@47af4a10b540781705f283a2cf1a9650713ac795 # v23
         with:
           server_address: ${{ secrets.MAIL_SERVER }}
@@ -181,15 +163,13 @@ jobs:
           username: ${{ secrets.MAIL_USERNAME }}
           password: ${{ secrets.MAIL_PASSWORD }}
           subject: ${{ github.event.repository.name }} version ${{ needs.prepare.outputs.release_version }} published
-          body: See https://github.com/metio/${{ github.event.repository.name }}/releases/tag/${{ needs.prepare.outputs.release_version }} for details.
+          body: See ${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.release_version }} for details.
           to: ${{ secrets.MAIL_RECIPIENT }}
           from: ${{ secrets.MAIL_SENDER }}
-      - id: matrix
-        name: Send Matrix Message
-        if: needs.prepare.outputs.release_version != ''
+      - name: Send Matrix Message
         uses: s3krit/matrix-message-action@70ad3fb812ee0e45ff8999d6af11cafad11a6ecf # v0.0.3
         with:
           room_id: ${{ secrets.MATRIX_ROOM_ID }}
           access_token: ${{ secrets.MATRIX_ACCESS_TOKEN }}
-          message: ${{ github.event.repository.name }} version [${{ needs.prepare.outputs.release_version }}](https://github.com/metio/${{ github.event.repository.name }}/releases/tag/${{ needs.prepare.outputs.release_version }}) published
+          message: ${{ github.event.repository.name }} version [${{ needs.prepare.outputs.release_version }}](${{ github.server_url }}/${{ github.repository }}/releases/tag/${{ needs.prepare.outputs.release_version }}) published
           server: ${{ secrets.MATRIX_SERVER }}
