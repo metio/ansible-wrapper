@@ -11,7 +11,6 @@
 .DS_Store
 .claude/settings.local.json
 target/
-target
 .venv
 pyproject.toml
 requirements.yml
