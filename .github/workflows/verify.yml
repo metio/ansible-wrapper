@@ -12,10 +12,10 @@ permissions:
 jobs:
   rust:
     name: Rust
-    uses: metio/ci/.github/workflows/rust.yml@80c1f686b6d746e2a92aaa4cbfa657d85781fd34 # 2026.11.4080804
+    uses: metio/ci/.github/workflows/rust.yml@00adafd0fe1924f57325d9dd264d5d731fb099ad # 2026.11.4082509
   lint:
     name: Lint
-    uses: metio/ci/.github/workflows/lint.yml@80c1f686b6d746e2a92aaa4cbfa657d85781fd34 # 2026.11.4080804
+    uses: metio/ci/.github/workflows/lint.yml@00adafd0fe1924f57325d9dd264d5d731fb099ad # 2026.11.4082509
   verify:
     name: Verify
     needs: [rust, lint]
