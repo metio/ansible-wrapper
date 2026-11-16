@@ -141,7 +141,7 @@ jobs:
       - name: Calculate Checksums
         run: sha256sum ./*.tar.gz > SHA256SUMS
         working-directory: dist
-      - uses: metio/ci/cosign-sign-blob@00adafd0fe1924f57325d9dd264d5d731fb099ad # 2026.11.4082509
+      - uses: metio/ci/cosign-sign-blob@ee1344847682b2c1a1c5b5413da59be084662645 # 2026.11.16053738
         with:
           file: dist/SHA256SUMS
       - name: Create Release
